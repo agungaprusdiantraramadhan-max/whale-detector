@@ -13,39 +13,49 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Java JDK
+      - name: Setup Java JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.24.x'
           channel: 'stable'
 
-      - name: Generate Complete Android Project
+      - name: Reconstruct Flutter Project Structure
         run: |
-          # Buat proyek Flutter utuh sementara
-          flutter create temp_app
+          # Simpan file yang sudah dibuat
+          mkdir -p /tmp/backup
+          cp pubspec.yaml /tmp/backup/
+          cp -r lib /tmp/backup/
           
-          # Salin folder android standar yang lengkap ke proyek utama jika belum ada wrapper
-          cp -r temp_app/android .
-          rm -rf temp_app
+          # Buat struktur Flutter bersih dan resmi
+          cd ..
+          flutter create --org com.quant.whaledetector whale_clean
+          cd whale_clean
+          
+          # Kembalikan file lib dan pubspec
+          cp /tmp/backup/pubspec.yaml .
+          cp -r /tmp/backup/lib/* lib/
+          
+          # Salin kembali ke direktori kerja utama
+          cp -r ./* $GITHUB_WORKSPACE/
+          cd $GITHUB_WORKSPACE
 
-          # Pulihkan kembali AndroidManifest kustom jika tertimpa
-          if [ -f android/app/src/main/AndroidManifest.xml ]; then
-            echo "AndroidManifest siap"
-          fi
+          # Tambahkan izin INTERNET ke AndroidManifest
+          sed -i '/<application/i <uses-permission android:name="android.permission.INTERNET"/>\n<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>' android/app/src/main/AndroidManifest.xml
 
-      - name: Get Dependencies
+      - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build Release APK
-        run: flutter build apk --release
+      - name: Build APK
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: whale-detector-app
+          name: whale-detector-release
           path: build/app/outputs/flutter-apk/app-release.apk
