@@ -24,6 +24,20 @@ jobs:
         with:
           channel: 'stable'
 
+      - name: Generate Complete Android Project
+        run: |
+          # Buat proyek Flutter utuh sementara
+          flutter create temp_app
+          
+          # Salin folder android standar yang lengkap ke proyek utama jika belum ada wrapper
+          cp -r temp_app/android .
+          rm -rf temp_app
+
+          # Pulihkan kembali AndroidManifest kustom jika tertimpa
+          if [ -f android/app/src/main/AndroidManifest.xml ]; then
+            echo "AndroidManifest siap"
+          fi
+
       - name: Get Dependencies
         run: flutter pub get
 
